@@ -15,6 +15,9 @@ import enrich_ratings
 import movie_agent
 
 
+if not hasattr(enrich_ratings, "configured_provider"):
+    enrich_ratings = importlib.reload(enrich_ratings)
+
 if "sort_by" not in inspect.signature(movie_agent.MovieAgent.respond).parameters:
     movie_agent = importlib.reload(movie_agent)
 
