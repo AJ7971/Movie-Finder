@@ -34,7 +34,7 @@ SELECT ?item ?runtime WHERE {
 LIMIT 10000
 """
 FIELDS = (
-    "movie_id", "title", "year", "genres", "runtime_min", "rating", "language",
+    "movie_id", "title", "year", "genres", "runtime_min", "rating", "rating_source", "language",
     "mood", "streaming_platforms", "content_rating", "description", "data_note",
     "source_url",
 )
@@ -80,6 +80,7 @@ def fetch_movies(client=requests):
             "genres": "",
             "runtime_min": "",
             "rating": "",
+            "rating_source": "",
             "language": "",
             "mood": "",
             "streaming_platforms": "",

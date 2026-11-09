@@ -1,6 +1,5 @@
 import importlib
 import inspect
-import os
 from pathlib import Path
 from html import escape
 
@@ -199,6 +198,8 @@ if st.session_state.movie_history:
             with columns[index % len(columns)]:
                 with st.container(border=True):
                     display_rating = f'{movie["rating"]}/10' if movie.get("rating") else "Not listed"
+                    if movie.get("rating_source") and movie.get("rating"):
+                        display_rating = f'{display_rating} · {movie["rating_source"]}'
                     display_runtime = f'{movie["runtime_min"]} min' if movie.get("runtime_min") else "Runtime not listed"
                     title = escape(movie["title"])
                     st.markdown(f'<div class="movie-poster">{title}</div>', unsafe_allow_html=True)
@@ -229,7 +230,11 @@ if st.session_state.movie_history:
                 {
                     "Title": movie["title"], "Year": movie["year"], "Genres": ", ".join(movie["genres_list"]),
                     "Runtime": f'{movie["runtime_min"]} min' if movie.get("runtime_min") else "Not listed",
-                    "Rating": f'{movie["rating"]}/10' if movie.get("rating") else "Not listed",
+                    "Rating": (
+                        f'{movie["rating"]}/10 · {movie["rating_source"]}'
+                        if movie.get("rating") and movie.get("rating_source")
+                        else f'{movie["rating"]}/10' if movie.get("rating") else "Not listed"
+                    ),
                     "Language": movie["language"], "Content rating": movie["content_rating"],
                     "Streaming": ", ".join(movie["platforms_list"]),
                 }
@@ -275,25 +280,23 @@ with st.sidebar:
         st.session_state.filter_family_friendly = False
         st.rerun()
 
-    provider = "omdb" if os.getenv("OMDB_API_KEY") else "tmdb" if os.getenv("TMDB_API_KEY") else None
+    provider = enrich_ratings.configured_provider()
+    if provider == "wikidata":
+        st.caption("No API key needed: sourced review scores from Wikidata are used when available.")
     if st.button("Refresh ratings", use_container_width=True):
-        if not provider:
-            st.warning(
-                "No ratings API key is configured. Add OMDB_API_KEY or TMDB_API_KEY to a local .env file or export it in your shell, then refresh again."
-            )
-        else:
-            try:
-                with st.spinner("Refreshing ratings from the configured provider..."):
-                    _, filled_count, _ = enrich_ratings.enrich_catalog(catalog_sources[selected_catalog], provider=provider)
-                if filled_count:
-                    st.success(f"Added {filled_count} ratings.")
-                    st.session_state.movie_agent = MovieAgent(load_catalog(catalog_sources[selected_catalog]))
-                    st.session_state.movie_history = []
-                    st.rerun()
-                else:
-                    st.info("No missing ratings could be filled from the configured source.")
-            except Exception as exc:
-                st.error(f"Ratings refresh failed: {exc}")
+        try:
+            spinner_text = "Refreshing sourced review scores from Wikidata..." if provider == "wikidata" else "Refreshing ratings from the configured provider..."
+            with st.spinner(spinner_text):
+                _, filled_count, _ = enrich_ratings.enrich_catalog(catalog_sources[selected_catalog], provider=provider)
+            if filled_count:
+                st.success(f"Added {filled_count} ratings from {provider.upper()}.")
+                st.session_state.movie_agent = MovieAgent(load_catalog(catalog_sources[selected_catalog]))
+                st.session_state.movie_history = []
+                st.rerun()
+            else:
+                st.info("No missing ratings could be filled from the configured source.")
+        except Exception as exc:
+            st.error(f"Ratings refresh failed: {exc}")
 
     st.markdown("---")
     st.caption("Recommendations use deterministic Python tools. No account or model API key required.")

@@ -39,6 +39,8 @@ The app includes two catalog choices. `data/movies.csv` contains 500 generated r
 
 `data/wikidata_movies.csv` contains the imported real-data snapshot. `import_wikidata.py` uses three bounded Wikidata Query Service requests, joins records by QID, and deduplicates multiple release-date statements. The current snapshot has 3,953 unique films. It includes title and earliest listed release year; genre and runtime are included when Wikidata has them. Missing rating, language, platform, and content-rating fields stay blank rather than being invented. To refresh it, run `python import_wikidata.py`; this requires network access and may take a few minutes. Structured Wikidata data is CC0. Source links are stored per record and the app attributes Wikidata in its sidebar. Respect the service's current access guidance and terms.
 
+Missing ratings can be refreshed without an API key using `python enrich_ratings.py --provider wikidata`. This reads explicitly attributed Wikidata review scores, prefers IMDb then Metacritic then Rotten Tomatoes, normalizes explicit numeric scales to 0–10, and records the chosen source in `rating_source`. Rotten Tomatoes percentages are skipped because they represent the share of positive reviews, not an average rating. These are review scores, not necessarily audience ratings. OMDb or TMDb remains available when a valid API key is configured. The app uses Wikidata when neither key is available.
+
 ## Agent and tools
 
 `MovieAgent` maintains conversation preferences and runs an observable workflow:
